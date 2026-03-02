@@ -1,0 +1,95 @@
+# ============================================================
+# OSINT & VULNERABILITY SYSTEM — Configuration
+# ============================================================
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+  debug: false
+  secret_key: "CHANGE_THIS_TO_A_RANDOM_64_CHAR_STRING"
+  session_expire_hours: 24
+
+database:
+  path: "data/osint.db"
+
+redis:
+  # Only used for domain/IP scans (heavy queue)
+  # Set enabled: false to use in-process async queue (lighter, for single user)
+  enabled: true
+  host: "localhost"
+  port: 6379
+  db: 0
+
+queue:
+  # Max concurrent heavy scans (domain/IP with nmap/nuclei)
+  max_heavy_workers: 2
+  # Light scans (email/password/hash/username) always run inline — no queue needed
+  light_inline: true
+
+# ── API KEYS ────────────────────────────────────────────────
+api_keys:
+  hibp: ""                  # https://haveibeenpwned.com/API/Key (free)
+  shodan: ""                # https://account.shodan.io (free tier available)
+  abuseipdb: ""             # https://www.abuseipdb.com/api (free tier)
+  hunter_io: ""             # https://hunter.io (25 free/month)
+  securitytrails: ""        # https://securitytrails.com (50 free/month)
+  virustotal: ""            # https://www.virustotal.com/gui/my-apikey (free)
+
+# ── TOOL PATHS ──────────────────────────────────────────────
+tools:
+  nmap: "nmap"
+  nuclei: "nuclei"
+  subfinder: "subfinder"
+  amass: "amass"
+  whatweb: "whatweb"
+  theharvester: "/opt/theHarvester/theHarvester.py"
+
+# ── SCAN SETTINGS ───────────────────────────────────────────
+scan:
+  timeouts:
+    nmap: 180
+    nuclei: 300
+    subfinder: 120
+    amass: 180
+    whatweb: 60
+    theharvester: 120
+    cve_api: 15
+    http: 10
+  nmap_flags: "-sV -sC --open -T4"
+  nuclei_severity: "critical,high,medium"
+  nvd_rate_limit_seconds: 0.6   # NVD allows ~10 req/min without key
+
+# ── NOTIFICATIONS ────────────────────────────────────────────
+notifications:
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_user: ""
+    smtp_pass: ""
+    from_addr: "osint-system@yourdomain.com"
+    to_addrs: []             # ["analyst@company.com"]
+    on_severity: ["critical", "high"]   # send alert when these found
+
+  slack:
+    enabled: false
+    webhook_url: ""
+    on_severity: ["critical", "high"]
+
+# ── SCHEDULING ───────────────────────────────────────────────
+scheduling:
+  enabled: true
+  check_interval_minutes: 5   # how often scheduler checks for due scans
+
+# ── REPORTING ────────────────────────────────────────────────
+reports:
+  output_dir: "reports"
+  company_name: "Your Company"
+  logo_path: ""              # optional path to PNG logo for PDF header
+
+# ── SECURITY ────────────────────────────────────────────────
+security:
+  max_login_attempts: 5
+  lockout_minutes: 15
+  allowed_scan_targets: []   # empty = allow all. Set CIDRs/domains to whitelist
+  require_target_confirmation: false

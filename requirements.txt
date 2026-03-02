@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+aiofiles
+python-multipart
+aiohttp
+dnspython
+python-whois
+sqlalchemy
+aiosqlite
+pydantic
+pyyaml
+reportlab

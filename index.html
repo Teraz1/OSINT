@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OSINT Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════
+   DESIGN TOKENS
+═══════════════════════════ */
+:root{
+  --bg:       #0f0f13;
+  --bg2:      #13131a;
+  --bg3:      #16161d;
+  --bg4:      #1c1c26;
+  --surface:  #1e1e28;
+  --border:   rgba(255,255,255,.06);
+  --border2:  rgba(255,255,255,.1);
+
+  --accent:       #7c6af7;
+  --accent-glow:  rgba(124,106,247,.25);
+  --accent-dim:   rgba(124,106,247,.12);
+  --accent-light: #a699ff;
+  --accent-text:  #c4beff;
+
+  --green:    #34d399;
+  --green-d:  rgba(52,211,153,.12);
+  --red:      #f7576a;
+  --red-d:    rgba(247,87,106,.12);
+  --orange:   #fb923c;
+  --orange-d: rgba(251,146,60,.12);
+  --yellow:   #fbbf24;
+  --yellow-d: rgba(251,191,36,.1);
+  --sky:      #38bdf8;
+  --sky-d:    rgba(56,189,248,.1);
+
+  --text:     #e8e8f0;
+  --body:     #b0b0c3;
+  --muted:    #6b6b80;
+  --dim:      #3a3a4a;
+
+  --font-ui:   'Syne', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  --r:  10px;
+  --rs: 7px;
+}
+
+/* ═══════════════════════════
+   RESET
+═══════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-ui);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:99px}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--font-ui);cursor:pointer}
+input,select,textarea{font-family:var(--font-ui)}
+
+/* ─── subtle bg glow ─── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(124,106,247,.05) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 85% 100%, rgba(124,106,247,.04) 0%, transparent 55%);
+  pointer-events:none;z-index:0;
+}
+
+/* ═══════════════════════════
+   SHELL
+═══════════════════════════ */
+.shell{display:flex;height:100vh;overflow:hidden;position:relative;z-index:1}
+
+/* ─────────────────────────
+   SIDEBAR
+───────────────────────── */
+.sidebar{
+  width:252px;flex-shrink:0;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* brand */
+.brand{
+  padding:20px 18px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+  flex-shrink:0;
+}
+.brand-icon{
+  width:32px;height:32px;
+  background:var(--accent-dim);
+  border:1px solid rgba(124,106,247,.25);
+  border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  box-shadow:0 0 16px rgba(124,106,247,.1);
+}
+.brand-name{
+  font-size:15px;font-weight:700;
+  color:var(--text);letter-spacing:-.2px;
+}
+.brand-ver{
+  font-family:var(--font-mono);
+  font-size:9px;color:var(--muted);
+  letter-spacing:.5px;
+}
+
+/* nav */
+.nav{padding:10px 8px;flex-shrink:0}
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 11px;border-radius:var(--rs);
+  cursor:pointer;
+  transition:background .15s,color .15s;
+  color:var(--muted);font-size:13px;font-weight:500;
+  border:1px solid transparent;
+  background:none;width:100%;text-align:left;
+  margin-bottom:1px;
+}
+.nav-item:hover{color:var(--body);background:rgba(255,255,255,.04)}
+.nav-item.active{
+  color:var(--accent-text);
+  background:var(--accent-dim);
+  border-color:rgba(124,106,247,.18);
+}
+.nav-icon{
+  width:16px;height:16px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:13px;
+}
+.nav-count{
+  margin-left:auto;
+  font-family:var(--font-mono);font-size:9px;
+  background:var(--accent-dim);color:var(--accent-light);
+  padding:1px 6px;border-radius:99px;
+}
+
+.s-sep{height:1px;background:var(--border);margin:6px 10px}
+
+/* ─── TARGET INPUT ─── */
+.target-section{padding:12px 12px 10px;flex-shrink:0}
+.sec-label{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:7px;display:flex;align-items:center;gap:6px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.t-wrap{position:relative}
+.t-icon{
+  position:absolute;left:10px;top:50%;
+  transform:translateY(-50%);
+  color:var(--dim);font-size:14px;pointer-events:none;
+  transition:color .2s;
+}
+.t-input{
+  width:100%;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:var(--rs);
+  color:var(--text);
+  padding:9px 12px 9px 32px;
+  font-family:var(--font-mono);font-size:11px;
+  outline:none;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+}
+.t-input:focus{
+  border-color:rgba(124,106,247,.45);
+  background:rgba(124,106,247,.04);
+  box-shadow:0 0 0 3px rgba(124,106,247,.08);
+}
+.t-input:focus ~ .t-icon,
+.t-wrap:focus-within .t-icon{color:var(--accent)}
+.t-input::placeholder{color:var(--dim)}
+
+.type-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:6px;font-family:var(--font-mono);font-size:10px;color:var(--muted);
+}
+.type-pill{
+  padding:2px 8px;border-radius:99px;
+  background:var(--accent-dim);
+  border:1px solid rgba(124,106,247,.2);
+  color:var(--accent-light);
+  font-size:10px;font-family:var(--font-mono);
+  transition:all .2s;
+}
+
+/* ─── MODULE PANEL ─── */
+.mod-wrap{flex:1;overflow-y:auto;padding:4px 8px 6px}
+.cat-block{margin-bottom:14px}
+.cat-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 4px 3px;margin-bottom:3px;
+}
+.cat-name{
+  font-size:9px;font-weight:600;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--muted);
+  font-family:var(--font-mono);
+}
+.cat-toggle{
+  font-size:9px;color:var(--dim);background:none;border:none;
+  cursor:pointer;font-family:var(--font-mono);
+  transition:color .15s;
+}
+.cat-toggle:hover{color:var(--accent-light)}
+
+.mod-row{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:6px 8px;border-radius:var(--rs);
+  cursor:pointer;
+  border:1px solid transparent;
+  transition:background .12s,border-color .12s;
+}
+.mod-row:hover{background:rgba(255,255,255,.03);border-color:var(--border)}
+.mod-row.no-tool{opacity:.28;cursor:not-allowed;pointer-events:none}
+
+.chk{
+  width:14px;height:14px;flex-shrink:0;margin-top:2px;
+  border:1.5px solid var(--dim);border-radius:4px;
+  background:transparent;position:relative;
+  transition:all .15s;
+}
+.chk.on{background:var(--accent);border-color:var(--accent)}
+.chk.on::after{
+  content:'';position:absolute;
+  top:1px;left:4px;
+  width:4px;height:7px;
+  border:1.5px solid #fff;
+  border-top:none;border-left:none;
+  transform:rotate(42deg);
+}
+.mod-name{font-size:12px;color:var(--body);font-weight:500;line-height:1.3}
+.mod-hint{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:1px}
+
+/* ─── SIDEBAR FOOTER ─── */
+.sb-foot{
+  padding:11px 12px;
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+}
+.sel-row{display:flex;gap:5px;margin-bottom:9px}
+.sel-btn{
+  flex:1;padding:5px 4px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  color:var(--muted);
+  font-size:10px;font-family:var(--font-mono);
+  border-radius:var(--rs);
+  transition:all .15s;
+}
+.sel-btn:hover{border-color:rgba(124,106,247,.4);color:var(--accent-text)}
+
+.run-btn{
+  width:100%;padding:11px;
+  background:var(--accent);
+  border:none;border-radius:var(--rs);
+  color:#fff;font-size:13px;font-weight:600;
+  letter-spacing:.2px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:all .2s;
+  box-shadow:0 4px 18px rgba(124,106,247,.3);
+}
+.run-btn:hover{background:var(--accent-light);transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,106,247,.4)}
+.run-btn:active{transform:translateY(0)}
+.run-btn:disabled{background:var(--surface);color:var(--muted);transform:none;box-shadow:none;cursor:not-allowed}
+.spin{
+  width:12px;height:12px;
+  border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;
+  animation:sp .6s linear infinite;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+.mod-count{
+  text-align:center;margin-top:6px;
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+}
+
+/* ─────────────────────────
+   MAIN AREA
+───────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* topbar */
+.topbar{
+  height:52px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg2);
+}
+.tb-left{display:flex;align-items:center;gap:10px}
+.page-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.page-badge{
+  font-family:var(--font-mono);font-size:10px;
+  padding:2px 8px;border-radius:99px;
+  background:var(--accent-dim);color:var(--accent-text);
+}
+.tb-right{display:flex;align-items:center;gap:10px}
+.clock{font-family:var(--font-mono);font-size:10px;color:var(--dim)}
+.user-chip{
+  display:flex;align-items:center;gap:7px;
+  padding:5px 11px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:99px;
+  font-size:12px;color:var(--body);
+}
+.user-av{
+  width:20px;height:20px;border-radius:50%;
+  background:var(--accent-dim);
+  border:1px solid rgba(124,106,247,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:var(--accent-light);
+}
+.sign-out{
+  padding:5px 12px;
+  background:transparent;border:1px solid var(--border);
+  color:var(--muted);font-size:11px;border-radius:var(--rs);
+  transition:all .15s;
+}
+.sign-out:hover{border-color:rgba(247,87,106,.4);color:var(--red)}
+
+/* history strip */
+.hist-strip{
+  padding:7px 18px;border-bottom:1px solid var(--border);
+  display:flex;gap:5px;overflow-x:auto;
+  flex-shrink:0;min-height:42px;align-items:center;
+  background:var(--bg);
+}
+.hist-strip::-webkit-scrollbar{height:0}
+.hist-chip{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:99px;cursor:pointer;
+  transition:all .15s;white-space:nowrap;flex-shrink:0;
+}
+.hist-chip:hover{background:var(--surface);border-color:var(--border2)}
+.hist-chip.active{background:var(--accent-dim);border-color:rgba(124,106,247,.3)}
+.hi-type{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+.hi-tgt{font-family:var(--font-mono);font-size:11px;color:var(--body)}
+.hi-badge{
+  font-family:var(--font-mono);font-size:9px;
+  padding:1px 6px;border-radius:99px;font-weight:500;
+}
+.hb-C{background:var(--red-d);color:var(--red)}
+.hb-H{background:var(--orange-d);color:var(--orange)}
+.hb-M{background:var(--yellow-d);color:var(--yellow)}
+.hb-L{background:var(--green-d);color:var(--green)}
+.hb-R{background:var(--accent-dim);color:var(--accent-light)}
+.hist-empty{font-family:var(--font-mono);font-size:11px;color:var(--dim)}
+
+/* ─────────────────────────
+   PAGES
+───────────────────────── */
+.page{display:none;flex:1;overflow:hidden;flex-direction:column}
+.page.active{display:flex}
+.page-scroll{flex:1;overflow-y:auto;padding:22px}
+
+/* empty */
+.empty{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  height:100%;gap:10px;text-align:center;
+}
+.empty-ring{
+  width:68px;height:68px;border-radius:50%;
+  border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;color:var(--dim);margin-bottom:8px;
+  position:relative;
+}
+.empty-ring::before{
+  content:'';position:absolute;inset:-10px;
+  border:1px solid var(--border);border-radius:50%;opacity:.5;
+}
+.empty-title{font-size:17px;font-weight:700;color:var(--dim)}
+.empty-sub{font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:2}
+
+/* ─────────────────────────
+   PROGRESS CARD
+───────────────────────── */
+.prog-card{
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:22px;
+  margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.prog-card::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-light),transparent);
+}
+.prog-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.prog-tgt{font-family:var(--font-mono);font-size:13px;color:var(--text);font-weight:500}
+.prog-pct{font-family:var(--font-mono);font-size:13px;color:var(--accent-light)}
+.prog-bar{height:3px;background:var(--surface);border-radius:99px;overflow:hidden;margin-bottom:10px}
+.prog-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--accent),var(--accent-light));
+  border-radius:99px;transition:width .4s ease;
+  box-shadow:0 0 8px var(--accent-glow);
+}
+.prog-step{
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  display:flex;align-items:center;gap:7px;margin-bottom:12px;
+}
+.prog-step::before{
+  content:'▶';font-size:8px;color:var(--accent);
+  animation:blink 1s steps(1) infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.prog-pills{display:flex;flex-wrap:wrap;gap:4px}
+.prog-pill{
+  font-family:var(--font-mono);font-size:9px;
+  padding:2px 8px;border-radius:99px;
+  background:var(--accent-dim);color:var(--muted);
+  border:1px solid rgba(124,106,247,.12);
+}
+.prog-id{font-family:var(--font-mono);font-size:9px;color:var(--dim);margin-top:10px}
+
+/* ─────────────────────────
+   RESULTS
+───────────────────────── */
+.risk-row{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:18px;align-items:center;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:20px;margin-bottom:18px;
+}
+.risk-ring{
+  width:86px;height:86px;border-radius:50%;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  border:2px solid;position:relative;flex-shrink:0;
+}
+.risk-ring::before{
+  content:'';position:absolute;
+  inset:6px;border-radius:50%;
+  border:1px solid;border-color:inherit;opacity:.2;
+}
+.risk-score{font-family:var(--font-mono);font-size:26px;font-weight:500;line-height:1}
+.risk-denom{font-family:var(--font-mono);font-size:9px;opacity:.5;letter-spacing:1px;margin-top:2px}
+.risk-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.risk-facts{
+  list-style:none;
+  font-family:var(--font-mono);font-size:10px;
+  color:var(--muted);line-height:1.9;
+}
+.risk-facts li::before{content:'— ';color:var(--accent-light)}
+.act-btns{display:flex;flex-direction:column;gap:5px}
+.act-btn{
+  padding:7px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  color:var(--body);font-size:11px;
+  border-radius:var(--rs);
+  transition:all .15s;white-space:nowrap;
+  text-align:center;display:block;
+}
+.act-btn:hover{border-color:rgba(124,106,247,.4);color:var(--accent-text)}
+
+/* stats */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:10px;margin-bottom:18px;
+}
+.stat{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);padding:14px 16px;
+  transition:border-color .2s;
+  position:relative;overflow:hidden;
+}
+.stat::after{
+  content:'';position:absolute;
+  bottom:0;left:0;right:0;height:2px;
+  background:var(--c, var(--accent));opacity:.5;
+}
+.stat:hover{border-color:rgba(124,106,247,.2)}
+.stat-n{
+  font-family:var(--font-mono);font-size:28px;font-weight:500;
+  color:var(--c, var(--accent-light));line-height:1;margin-bottom:4px;
+}
+.stat-l{font-size:11px;color:var(--muted);letter-spacing:.3px}
+
+/* tabs */
+.tabs{
+  display:flex;gap:0;border-bottom:1px solid var(--border);
+  margin-bottom:16px;overflow-x:auto;
+}
+.tabs::-webkit-scrollbar{height:0}
+.tab{
+  padding:8px 15px;font-family:var(--font-mono);
+  font-size:10px;letter-spacing:.5px;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .18s;
+}
+.tab:hover{color:var(--body)}
+.tab.on{color:var(--accent-light);border-bottom-color:var(--accent)}
+
+/* card */
+.card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;margin-bottom:12px;
+  transition:border-color .2s;
+}
+.card:hover{border-color:rgba(124,106,247,.12)}
+.card-hdr{
+  padding:9px 15px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-ttl{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px}
+.card-cnt{
+  font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  background:var(--surface);padding:1px 7px;border-radius:99px;
+}
+.card-body{padding:13px 15px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* table */
+table.t{width:100%;border-collapse:collapse;font-size:12px}
+table.t th{
+  text-align:left;padding:6px 10px;
+  font-size:10px;font-weight:600;color:var(--muted);
+  letter-spacing:.5px;border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+table.t td{
+  padding:8px 10px;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  color:var(--body);vertical-align:top;
+}
+table.t tr:last-child td{border:none}
+table.t tr:hover td{background:rgba(255,255,255,.01)}
+
+/* kv */
+table.kv{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px}
+table.kv td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+table.kv tr:last-child td{border:none}
+.kk{color:var(--muted);width:130px;padding-right:12px}
+.kv-v{color:var(--body)}
+
+/* port row */
+.port-row{
+  display:flex;align-items:center;gap:12px;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);
+}
+.port-row:last-child{border:none}
+.port-n{font-family:var(--font-mono);font-size:12px;color:var(--sky);width:75px;flex-shrink:0}
+.port-s{font-family:var(--font-mono);font-size:11px;color:var(--green);width:90px;flex-shrink:0}
+.port-v{font-size:11px;color:var(--muted);flex:1}
+.risky-tag{
+  font-family:var(--font-mono);font-size:9px;
+  padding:2px 7px;border-radius:99px;
+  background:var(--orange-d);color:var(--orange);
+  border:1px solid rgba(251,146,60,.2);
+}
+
+/* finding */
+.finding{
+  padding:13px 14px;margin-bottom:8px;
+  background:var(--bg4);border:1px solid var(--border);
+  border-radius:var(--r);transition:border-color .2s;
+}
+.finding:hover{border-color:rgba(124,106,247,.15)}
+.find-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px}
+.find-id{font-family:var(--font-mono);font-size:11px;color:var(--sky)}
+.find-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.find-desc{font-size:11px;color:var(--muted);line-height:1.6}
+.find-url{font-family:var(--font-mono);font-size:10px;color:var(--dim);margin-top:5px}
+
+/* severity */
+.sev{
+  font-family:var(--font-mono);font-size:10px;
+  padding:2px 8px;border-radius:99px;flex-shrink:0;font-weight:500;
+}
+.sev-critical,.sev-CRITICAL{background:var(--red-d);color:var(--red);border:1px solid rgba(247,87,106,.2)}
+.sev-high,.sev-HIGH{background:var(--orange-d);color:var(--orange);border:1px solid rgba(251,146,60,.2)}
+.sev-medium,.sev-MEDIUM{background:var(--yellow-d);color:var(--yellow);border:1px solid rgba(251,191,36,.2)}
+.sev-low,.sev-LOW{background:var(--green-d);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.sev-unknown,.sev-UNKNOWN{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+
+/* note */
+.note-row{
+  display:flex;gap:5px;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--border);
+}
+.note-sel,.note-inp{
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  color:var(--body);font-family:var(--font-mono);
+  font-size:10px;padding:5px 8px;border-radius:var(--rs);
+  outline:none;transition:border-color .15s;
+}
+.note-sel:focus,.note-inp:focus{border-color:rgba(124,106,247,.4)}
+.note-inp{flex:1}
+.note-inp::placeholder{color:var(--dim)}
+.note-save{
+  padding:5px 10px;
+  background:var(--accent-dim);
+  border:1px solid rgba(124,106,247,.3);
+  color:var(--accent-light);
+  font-family:var(--font-mono);font-size:10px;
+  border-radius:var(--rs);transition:all .15s;
+}
+.note-save:hover{background:var(--accent);color:#fff}
+
+/* subdomains */
+.sub-list{
+  font-family:var(--font-mono);font-size:10px;
+  max-height:240px;overflow-y:auto;
+  column-count:2;column-gap:10px;
+}
+.sub-item{
+  padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  color:var(--green);break-inside:avoid;
+}
+
+/* platform */
+.plat-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);
+}
+.plat-row:last-child{border:none}
+.plat-name{font-size:12px;font-weight:500;color:var(--body)}
+.plat-found{font-family:var(--font-mono);font-size:11px;color:var(--green)}
+.plat-miss{font-family:var(--font-mono);font-size:11px;color:var(--dim)}
+
+/* breach */
+.breach{
+  padding:10px 12px;margin-bottom:6px;
+  background:var(--red-d);border:1px solid rgba(247,87,106,.15);
+  border-radius:var(--rs);
+}
+.breach-name{font-size:12px;font-weight:600;color:var(--red);margin-bottom:2px}
+.breach-date{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+.breach-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.btag{
+  font-family:var(--font-mono);font-size:9px;
+  padding:1px 5px;border-radius:3px;
+  background:rgba(247,87,106,.1);color:var(--red);
+  border:1px solid rgba(247,87,106,.2);
+}
+
+/* diff */
+.diff-banner{
+  background:rgba(124,106,247,.06);
+  border:1px solid rgba(124,106,247,.18);
+  border-radius:var(--r);padding:12px 16px;margin-bottom:16px;
+}
+.diff-label{
+  font-family:var(--font-mono);font-size:9px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--accent-text);margin-bottom:8px;
+}
+.diff-item{
+  display:flex;align-items:center;gap:8px;
+  padding:2px 0;font-family:var(--font-mono);font-size:11px;
+}
+.d-add{color:var(--green)}
+.d-rem{color:var(--red)}
+.d-chg{color:var(--yellow)}
+
+/* notice */
+.notice{
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border2);
+  border-radius:var(--rs);padding:9px 12px;
+  font-family:var(--font-mono);font-size:10px;
+  color:var(--muted);line-height:1.6;
+}
+
+/* tags */
+.tag{
+  display:inline-block;padding:2px 8px;
+  border-radius:99px;font-family:var(--font-mono);
+  font-size:9px;margin:2px;
+}
+.tag-sky{background:var(--sky-d);color:var(--sky);border:1px solid rgba(56,189,248,.2)}
+.tag-grn{background:var(--green-d);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.tag-red{background:var(--red-d);color:var(--red);border:1px solid rgba(247,87,106,.2)}
+
+.nd{
+  font-family:var(--font-mono);font-size:11px;
+  color:var(--dim);padding:16px 0;text-align:center;
+}
+
+/* ─────────────────────────
+   TARGETS PAGE
+───────────────────────── */
+.add-row{display:flex;gap:8px;margin-bottom:20px;align-items:center}
+.fi{
+  flex:1;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  border-radius:var(--rs);color:var(--text);
+  padding:9px 12px;font-family:var(--font-mono);
+  font-size:12px;outline:none;transition:all .2s;
+}
+.fi:focus{border-color:rgba(124,106,247,.4);box-shadow:0 0 0 3px rgba(124,106,247,.07)}
+.fi::placeholder{color:var(--dim)}
+.add-btn{
+  padding:9px 18px;
+  background:var(--accent-dim);
+  border:1px solid rgba(124,106,247,.3);
+  color:var(--accent-light);font-size:12px;font-weight:600;
+  border-radius:var(--rs);transition:all .15s;white-space:nowrap;
+}
+.add-btn:hover{background:var(--accent);color:#fff}
+
+.tg-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+  gap:10px;
+}
+.tg-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);padding:16px;cursor:pointer;
+  transition:all .18s;
+}
+.tg-card:hover{border-color:rgba(124,106,247,.3);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.tg-val{font-family:var(--font-mono);font-size:11px;color:var(--accent-light);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tg-lbl{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
+.tg-foot{display:flex;justify-content:space-between;align-items:center}
+.tg-type{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+.tg-time{font-family:var(--font-mono);font-size:9px;color:var(--dim)}
+
+/* ─────────────────────────
+   SCHEDULES
+───────────────────────── */
+.sch-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);padding:13px 16px;margin-bottom:8px;
+  display:flex;align-items:center;gap:12px;
+  transition:border-color .2s;
+}
+.sch-card:hover{border-color:rgba(124,106,247,.15)}
+.sch-info{flex:1;min-width:0}
+.sch-tgt{font-family:var(--font-mono);font-size:12px;color:var(--body);margin-bottom:3px}
+.sch-meta{font-size:11px;color:var(--muted)}
+.tog-btn{
+  padding:4px 12px;border-radius:99px;
+  font-family:var(--font-mono);font-size:10px;
+  cursor:pointer;border:1px solid;background:transparent;transition:all .15s;
+}
+.tog-on{border-color:rgba(52,211,153,.4);color:var(--green)}
+.tog-on:hover{background:var(--green-d)}
+.tog-off{border-color:var(--border2);color:var(--muted)}
+.tog-off:hover{border-color:rgba(124,106,247,.4);color:var(--accent-light)}
+.del-btn{
+  padding:4px 10px;background:transparent;
+  border:1px solid var(--border);color:var(--muted);
+  font-family:var(--font-mono);font-size:10px;
+  border-radius:var(--rs);cursor:pointer;transition:all .15s;
+}
+.del-btn:hover{border-color:rgba(247,87,106,.4);color:var(--red)}
+
+/* ─────────────────────────
+   MODALS
+───────────────────────── */
+.modal-bg{
+  position:fixed;inset:0;
+  background:rgba(5,5,10,.8);
+  backdrop-filter:blur(6px);
+  z-index:1000;display:flex;
+  align-items:center;justify-content:center;
+  animation:fi .2s ease;
+}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+.modal{
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  border-radius:14px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04);
+  animation:su .25s cubic-bezier(.22,1,.36,1);
+}
+@keyframes su{from{transform:translateY(18px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-hdr{
+  padding:15px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-ttl{font-size:14px;font-weight:700;color:var(--text)}
+.modal-x{
+  width:27px;height:27px;background:var(--surface);
+  border:1px solid var(--border);color:var(--muted);
+  border-radius:var(--rs);font-size:13px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .15s;
+}
+.modal-x:hover{border-color:rgba(247,87,106,.4);color:var(--red)}
+.modal-body{padding:20px}
+.f-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;display:block;letter-spacing:.5px}
+.f-group{margin-bottom:14px}
+.f-input,.f-select{
+  width:100%;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);color:var(--text);
+  padding:9px 11px;border-radius:var(--rs);
+  outline:none;font-family:var(--font-mono);font-size:12px;
+  transition:border-color .2s;
+}
+.f-input:focus,.f-select:focus{border-color:rgba(124,106,247,.4);box-shadow:0 0 0 3px rgba(124,106,247,.07)}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end;margin-top:18px}
+.mb{
+  padding:8px 18px;border-radius:var(--rs);
+  font-size:12px;font-weight:600;border:1px solid;cursor:pointer;transition:all .15s;
+}
+.mb-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.mb-p:hover{background:var(--accent-light)}
+.mb-g{background:transparent;border-color:var(--border2);color:var(--muted)}
+.mb-g:hover{border-color:rgba(247,87,106,.4);color:var(--red)}
+
+/* graph legend */
+.graph-legend{
+  position:absolute;top:14px;right:14px;
+  background:rgba(19,19,26,.9);
+  border:1px solid var(--border);
+  border-radius:var(--rs);padding:10px 14px;
+  backdrop-filter:blur(10px);
+}
+.gl-item{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:11px;color:var(--muted)}
+.gl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ─────────────────────────
+   TOAST
+───────────────────────── */
+.toast{
+  position:fixed;bottom:22px;right:22px;z-index:9999;
+  background:var(--bg3);
+  border:1px solid rgba(124,106,247,.25);
+  border-radius:var(--r);
+  padding:10px 16px;font-size:12px;color:var(--body);
+  display:flex;align-items:center;gap:8px;
+  box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 0 1px rgba(124,106,247,.05);
+  animation:toastIn .3s cubic-bezier(.22,1,.36,1);
+}
+.toast::before{content:'●';font-size:7px;color:var(--accent)}
+@keyframes toastIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-icon">◎</div>
+    <div>
+      <div class="brand-name">OSINT Platform</div>
+      <div class="brand-ver">v3.0 · intel suite</div>
+    </div>
+  </div>
+
+  <nav class="nav" id="sideNav">
+    <button class="nav-item active" onclick="goPage('scan',this)">
+      <span class="nav-icon">⌖</span> Scan
+    </button>
+    <button class="nav-item" onclick="goPage('targets',this)">
+      <span class="nav-icon">◈</span> Targets
+    </button>
+    <button class="nav-item" onclick="goPage('schedules',this)">
+      <span class="nav-icon">⊟</span> Schedules
+    </button>
+    <button class="nav-item" onclick="goPage('audit',this)">
+      <span class="nav-icon">≡</span> Audit Log
+    </button>
+  </nav>
+
+  <div class="s-sep"></div>
+
+  <div class="target-section">
+    <div class="sec-label">Target</div>
+    <div class="t-wrap">
+      <span class="t-icon">⌕</span>
+      <input class="t-input" id="targetInput" type="text"
+        placeholder="domain · IP · email · hash · user"
+        oninput="onInput(this.value)"
+        onkeydown="if(event.key==='Enter')startScan()"/>
+    </div>
+    <div class="type-badge">
+      Type: <span class="type-pill" id="typePill">—</span>
+    </div>
+  </div>
+
+  <div class="sec-label" style="padding:0 12px 6px;margin-top:2px">Modules</div>
+  <div class="mod-wrap" id="modsPanel">
+    <div class="nd" style="margin-top:20px">Enter a target to see modules</div>
+  </div>
+
+  <div class="sb-foot">
+    <div class="sel-row">
+      <button class="sel-btn" onclick="selAll()">All</button>
+      <button class="sel-btn" onclick="selNone()">None</button>
+      <button class="sel-btn" onclick="selRec()">Rec.</button>
+    </div>
+    <button class="run-btn" id="scanBtn" onclick="startScan()">
+      <span>▶</span> Run Scan
+    </button>
+    <div class="mod-count" id="selCount">0 modules selected</div>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<div class="main">
+
+  <!-- topbar -->
+  <div class="topbar">
+    <div class="tb-left">
+      <span class="page-title" id="pageTitle">Scan</span>
+    </div>
+    <div class="tb-right">
+      <span class="clock" id="clock"></span>
+      <div class="user-chip">
+        <div class="user-av" id="userAv">?</div>
+        <span id="currentUser">—</span>
+      </div>
+      <button class="sign-out" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- ── SCAN PAGE ── -->
+  <div class="page active" id="page-scan">
+    <div class="hist-strip" id="histStrip">
+      <span class="hist-empty">No scans yet</span>
+    </div>
+    <div class="page-scroll" id="scanContent">
+      <div class="empty">
+        <div class="empty-ring">⌖</div>
+        <div class="empty-title">Ready to scan</div>
+        <div class="empty-sub">Enter a target in the sidebar<br>Select modules and hit Run</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TARGETS PAGE ── -->
+  <div class="page" id="page-targets">
+    <div class="page-scroll">
+      <div class="add-row">
+        <input class="fi" id="newVal" placeholder="domain.com / IP / email…"/>
+        <input class="fi" id="newLabel" placeholder="Label (optional)" style="max-width:180px"/>
+        <button class="add-btn" onclick="addTarget()">+ Add</button>
+      </div>
+      <div class="tg-grid" id="targetGrid"><div class="nd">No targets saved yet</div></div>
+    </div>
+  </div>
+
+  <!-- ── SCHEDULES PAGE ── -->
+  <div class="page" id="page-schedules">
+    <div class="page-scroll">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button class="add-btn" onclick="openSchedModal()">+ New Schedule</button>
+      </div>
+      <div id="schedList"><div class="nd">No schedules configured</div></div>
+    </div>
+  </div>
+
+  <!-- ── AUDIT PAGE ── -->
+  <div class="page" id="page-audit">
+    <div class="page-scroll">
+      <div class="card">
+        <div class="card-hdr"><span class="card-ttl">Audit Log</span></div>
+        <div class="card-body" style="padding:0">
+          <table class="t" id="auditTbl">
+            <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Detail</th><th>IP</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ── GRAPH MODAL ── -->
+<div class="modal-bg" id="graphModal" style="display:none">
+  <div style="width:88vw;height:82vh;background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 90px rgba(0,0,0,.7)">
+    <div class="modal-hdr">
+      <span class="modal-ttl">Network Graph</span>
+      <button class="modal-x" onclick="document.getElementById('graphModal').style.display='none'">✕</button>
+    </div>
+    <div style="flex:1;position:relative;background:var(--bg)">
+      <svg id="graphSvg" style="width:100%;height:100%"></svg>
+      <div class="graph-legend">
+        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:7px">Legend</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#7c6af7"></div>Target</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#34d399"></div>Subdomain</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#38bdf8"></div>Port</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#f7576a"></div>Vuln / CVE</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#a78bfa"></div>DNS</div>
+        <div class="gl-item"><div class="gl-dot" style="background:#fbbf24"></div>Email</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCHEDULE MODAL ── -->
+<div class="modal-bg" id="schedModal" style="display:none">
+  <div class="modal" style="width:400px">
+    <div class="modal-hdr">
+      <span class="modal-ttl">New Scheduled Scan</span>
+      <button class="modal-x" onclick="document.getElementById('schedModal').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="f-group">
+        <label class="f-label">Target</label>
+        <select class="f-select" id="schedTarget"></select>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Repeat Every</label>
+        <select class="f-select" id="schedInterval">
+          <option value="6">6 hours</option>
+          <option value="12">12 hours</option>
+          <option value="24" selected>Daily</option>
+          <option value="72">Every 3 days</option>
+          <option value="168">Weekly</option>
+        </select>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Modules (comma-separated)</label>
+        <input class="f-input" id="schedModules" placeholder="dns,nmap,nuclei,cve"/>
+      </div>
+      <div class="modal-btns">
+        <button class="mb mb-g" onclick="document.getElementById('schedModal').style.display='none'">Cancel</button>
+        <button class="mb mb-p" onclick="createSchedule()">Create Schedule</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const API='';
+let mods={}, checked={}, inputType='', curScan=null, pollTmr=null;
+let allTargets=[], notes={};
+
+// ── INIT ──────────────────────────────────────────
+window.onload = async () => {
+  try {
+    const r = await fetch(`${API}/api/auth/me`,{credentials:'include'});
+    if(!r.ok){window.location.href='/login';return;}
+    const u = await r.json();
+    document.getElementById('currentUser').textContent = u.username;
+    document.getElementById('userAv').textContent = u.username[0].toUpperCase();
+  } catch{window.location.href='/login';return;}
+
+  mods = await (await fetch(`${API}/api/modules`,{credentials:'include'})).json();
+  loadHistory();
+  loadTargets();
+  setInterval(()=>{
+    document.getElementById('clock').textContent =
+      new Date().toISOString().slice(0,19).replace('T',' ')+' UTC';
+  },1000);
+};
+
+async function logout(){
+  await fetch(`${API}/api/auth/logout`,{method:'POST',credentials:'include'});
+  window.location.href='/login';
+}
+
+// ── NAV ──────────────────────────────────────────
+function goPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  btn.classList.add('active');
+  const titles={scan:'Scan',targets:'Targets',schedules:'Schedules',audit:'Audit Log'};
+  document.getElementById('pageTitle').textContent=titles[name]||name;
+  if(name==='targets') loadTargets();
+  if(name==='schedules') loadSchedules();
+  if(name==='audit') loadAudit();
+}
+
+// ── INPUT ──────────────────────────────────────────
+let deb;
+function onInput(v){
+  clearTimeout(deb);
+  if(!v.trim()){
+    document.getElementById('typePill').textContent='—';
+    inputType='';
+    document.getElementById('modsPanel').innerHTML='<div class="nd" style="margin-top:20px">Enter a target to see modules</div>';
+    updateCount();return;
+  }
+  deb=setTimeout(async()=>{
+    const r=await fetch(`${API}/api/detect-type`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:v}),credentials:'include'});
+    const d=await r.json();
+    inputType=d.input_type;
+    document.getElementById('typePill').textContent=inputType;
+    renderMods(inputType);
+  },300);
+}
+
+function renderMods(type){
+  const cats={};
+  for(const[k,m]of Object.entries(mods)){
+    if(!m.inputs.includes(type))continue;
+    if(!cats[m.category])cats[m.category]=[];
+    cats[m.category].push({key:k,...m});
+    if(checked[k]===undefined)checked[k]=m.tool_available!==false;
+  }
+  let html='';
+  for(const[cat,ms]of Object.entries(cats)){
+    html+=`<div class="cat-block">
+      <div class="cat-hdr">
+        <span class="cat-name">${cat}</span>
+        <button class="cat-toggle" onclick="togCat('${cat}',event)">all/none</button>
+      </div>`;
+    for(const m of ms){
+      const bad=m.requires_tool&&!m.tool_available;
+      html+=`<div class="mod-row ${bad?'no-tool':''}" ${!bad?`onclick="togMod('${m.key}')"`:`title="${m.requires_tool} not installed"`}>
+        <div class="chk ${checked[m.key]&&!bad?'on':''}" id="ck_${m.key}"></div>
+        <div>
+          <div class="mod-name">${m.label}</div>
+          <div class="mod-hint">${bad?'⚠ '+m.requires_tool+' not installed':m.description||''}</div>
+        </div>
+      </div>`;
+    }
+    html+='</div>';
+  }
+  document.getElementById('modsPanel').innerHTML=html||'<div class="nd">No modules for this input type</div>';
+  updateCount();
+}
+
+function togMod(k){
+  checked[k]=!checked[k];
+  const c=document.getElementById(`ck_${k}`);
+  if(c)c.className='chk'+(checked[k]?' on':'');
+  updateCount();
+}
+function togCat(cat,e){
+  e.stopPropagation();
+  const ms=Object.entries(mods).filter(([k,m])=>m.category===cat&&m.inputs.includes(inputType));
+  const allOn=ms.every(([k])=>checked[k]);
+  ms.forEach(([k,m])=>{
+    if(m.requires_tool&&!m.tool_available)return;
+    checked[k]=!allOn;
+    const c=document.getElementById(`ck_${k}`);
+    if(c)c.className='chk'+(checked[k]?' on':'');
+  });
+  updateCount();
+}
+function selAll(){
+  Object.entries(mods).forEach(([k,m])=>{
+    if(m.inputs.includes(inputType)&&m.tool_available!==false){
+      checked[k]=true;const c=document.getElementById(`ck_${k}`);if(c)c.className='chk on';
+    }
+  });updateCount();
+}
+function selNone(){
+  Object.keys(checked).forEach(k=>{
+    checked[k]=false;const c=document.getElementById(`ck_${k}`);if(c)c.className='chk';
+  });updateCount();
+}
+async function selRec(){
+  const r=await fetch(`${API}/api/recommended`,{credentials:'include'});
+  const rec=await r.json();
+  selNone();
+  for(const k of(rec[inputType]||[])){
+    if(mods[k]?.inputs.includes(inputType)&&mods[k].tool_available!==false){
+      checked[k]=true;const c=document.getElementById(`ck_${k}`);if(c)c.className='chk on';
+    }
+  }updateCount();
+}
+function updateCount(){
+  const n=Object.values(checked).filter(Boolean).length;
+  document.getElementById('selCount').textContent=`${n} module${n!==1?'s':''} selected`;
+}
+
+// ── SCAN ──────────────────────────────────────────
+async function startScan(){
+  const tgt=document.getElementById('targetInput').value.trim();
+  if(!tgt)return toast('Enter a target first');
+  const ms=Object.entries(checked).filter(([k,v])=>v).map(([k])=>k);
+  if(!ms.length)return toast('Select at least one module');
+  const btn=document.getElementById('scanBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span> Scanning…';
+  try{
+    const r=await fetch(`${API}/api/scan`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({target:tgt,modules:ms})});
+    if(r.status===401){window.location.href='/login';return;}
+    const d=await r.json();
+    curScan=d.scan_id;
+    showProg(tgt,curScan,ms);poll(curScan);
+    loadHistory();toast(`Scan started · ${d.scan_id}`);
+  }catch(e){toast('Error: '+e.message);resetBtn();}
+}
+function poll(id){
+  if(pollTmr)clearInterval(pollTmr);
+  pollTmr=setInterval(async()=>{
+    const r=await fetch(`${API}/api/scan/${id}/status`,{credentials:'include'});
+    const d=await r.json();
+    upProg(d);
+    if(d.status==='done'){clearInterval(pollTmr);await loadResults(id);loadHistory();resetBtn();toast('Scan complete');}
+    else if(d.status==='failed'){clearInterval(pollTmr);resetBtn();toast('Scan failed');}
+  },1500);
+}
+function resetBtn(){
+  const b=document.getElementById('scanBtn');b.disabled=false;b.innerHTML='<span>▶</span> Run Scan';
+}
+
+// ── PROGRESS ──────────────────────────────────────
+function showProg(tgt,id,ms){
+  const labels=ms.map(k=>mods[k]?.label||k);
+  document.getElementById('scanContent').innerHTML=`
+    <div class="prog-card">
+      <div class="prog-top">
+        <span class="prog-tgt">${tgt}</span>
+        <span class="prog-pct" id="pp">0%</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+      <div class="prog-step" id="ps">Initializing</div>
+      <div class="prog-pills">${labels.map(l=>`<span class="prog-pill">${l}</span>`).join('')}</div>
+      <div class="prog-id">Scan ID: ${id}</div>
+    </div>`;
+}
+function upProg(d){
+  const f=document.getElementById('pf'),p=document.getElementById('pp'),s=document.getElementById('ps');
+  if(f)f.style.width=d.progress+'%';if(p)p.textContent=d.progress+'%';if(s)s.textContent=d.step||'';
+}
+
+// ── RESULTS ──────────────────────────────────────
+async function loadResults(id){
+  const r=await fetch(`${API}/api/scan/${id}/results`,{credentials:'include'});
+  const d=await r.json();
+  if(d.status&&d.status!=='done')return;
+  try{notes=await(await fetch(`${API}/api/findings/${id}`,{credentials:'include'})).json();}catch{}
+  renderResults(d);setTimeout(()=>loadDiff(id),200);
+}
+
+function renderResults(d){
+  const risk=d.risk||{};const rc=risk.color||'#6b6b80';
+  const ports=d.nmap?.ports||[];const vulns=d.nuclei?.vulnerabilities||[];
+  const cves=d.cve?.cves||[];const subs=d.all_subdomains||[];
+
+  const tabs=[];
+  if(ports.length)tabs.push({id:'ports',l:'Ports'});
+  if(vulns.length)tabs.push({id:'vulns',l:'Vulns'});
+  if(cves.length) tabs.push({id:'cves', l:'CVEs'});
+  if(subs.length||d.dns||d.harvester)tabs.push({id:'recon',l:'Recon'});
+  if(d.whois||d.dns)tabs.push({id:'dns',l:'WHOIS/DNS'});
+  if(d.ip_geo||d.ip_asn||d.ip_blacklist||d.shodan)tabs.push({id:'ip',l:'IP Intel'});
+  if(d.hibp)       tabs.push({id:'breach',l:'Breaches'});
+  if(d.pwned_pass) tabs.push({id:'pwd',  l:'Password'});
+  if(d.hash_id||d.hash_lookup)tabs.push({id:'hash',l:'Hash'});
+  if(d.username)   tabs.push({id:'uname',l:'Username'});
+  if(d.email_valid)tabs.push({id:'email',l:'Email'});
+  if(d.ssl_check)  tabs.push({id:'ssl',  l:'SSL'});
+  if(!tabs.length) tabs.push({id:'raw',  l:'Raw JSON'});
+
+  document.getElementById('scanContent').innerHTML=`
+    <div class="risk-row">
+      <div class="risk-ring" style="border-color:${rc};color:${rc}">
+        <div class="risk-score">${risk.score??'—'}</div>
+        <div class="risk-denom">/100</div>
+      </div>
+      <div>
+        <div class="risk-title" style="color:${rc}">${risk.level||'—'} Risk</div>
+        <ul class="risk-facts">${(risk.factors||[]).map(f=>`<li>${f}</li>`).join('')||'<li style="color:var(--green)">No critical risk factors</li>'}</ul>
+      </div>
+      <div class="act-btns">
+        <button class="act-btn" onclick="showGraph('${d.scan_id}')">⋯ Network Graph</button>
+        <a class="act-btn" href="/api/scan/${d.scan_id}/report/pdf" target="_blank">↓ PDF Report</a>
+        <a class="act-btn" href="/api/scan/${d.scan_id}/report/json" target="_blank">↓ JSON Export</a>
+      </div>
+    </div>
+
+    <div id="diffArea"></div>
+
+    <div class="stats-grid">
+      <div class="stat" style="--c:var(--sky)"><div class="stat-n" style="color:var(--sky)">${ports.length}</div><div class="stat-l">Open Ports</div></div>
+      <div class="stat" style="--c:var(--orange)"><div class="stat-n" style="color:var(--orange)">${vulns.length}</div><div class="stat-l">Nuclei Hits</div></div>
+      <div class="stat" style="--c:var(--red)"><div class="stat-n" style="color:var(--red)">${cves.length}</div><div class="stat-l">CVEs</div></div>
+      <div class="stat" style="--c:var(--green)"><div class="stat-n" style="color:var(--green)">${subs.length}</div><div class="stat-l">Subdomains</div></div>
+    </div>
+
+    <div class="tabs" id="rtabs">
+      ${tabs.map((t,i)=>`<div class="tab ${i===0?'on':''}" onclick="rtab('${t.id}',this)">${t.l}</div>`).join('')}
+    </div>
+
+    ${tPorts(d)}${tVulns(d)}${tCves(d)}${tRecon(d)}${tDns(d)}${tIp(d)}
+    ${tBreach(d)}${tPwd(d)}${tHash(d)}${tUname(d)}${tEmail(d)}${tSsl(d)}${tRaw(d)}
+  `;
+  if(tabs.length)rtab(tabs[0].id,document.querySelector('#rtabs .tab'));
+}
+
+function rtab(id,el){
+  document.querySelectorAll('[id^="rt-"]').forEach(t=>t.style.display='none');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  const p=document.getElementById('rt-'+id);if(p)p.style.display='block';
+  if(el)el.classList.add('on');
+}
+
+// ── TAB RENDERS ──────────────────────────────────
+const RISKY=new Set([21,22,23,25,53,110,143,389,445,3389,5900,6379,27017,9200,9042]);
+
+function tPorts(d){
+  const p=d.nmap?.ports||[];
+  return `<div id="rt-ports" style="display:none"><div class="card">
+    <div class="card-hdr"><span class="card-ttl">Open Ports & Services</span><span class="card-cnt">${p.length}</span></div>
+    <div class="card-body">
+      ${p.map(x=>`<div class="port-row">
+        <span class="port-n">${x.port}/${x.protocol}</span>
+        <span class="port-s">${x.service}</span>
+        <span class="port-v">${x.version||'—'}</span>
+        ${RISKY.has(x.port)?'<span class="risky-tag">risky</span>':''}
+      </div>`).join('')||'<div class="nd">No open ports detected</div>'}
+    </div>
+  </div></div>`;
+}
+function tVulns(d){
+  const v=d.nuclei?.vulnerabilities||[];
+  return `<div id="rt-vulns" style="display:none">
+    ${v.map(x=>`<div class="finding">
+      <div class="find-top">
+        <div><div class="find-id">${x.template_id}</div><div class="find-name">${x.name}</div></div>
+        <span class="sev sev-${x.severity}">${x.severity.toUpperCase()}</span>
+      </div>
+      <div class="find-desc">${x.description||''}</div>
+      <div class="find-url">${x.matched_url}</div>
+      ${noteRow(d.scan_id,'nuclei:'+x.template_id)}
+    </div>`).join('')||'<div class="nd">No vulnerabilities detected</div>'}
+  </div>`;
+}
+function tCves(d){
+  const c=d.cve?.cves||[];
+  return `<div id="rt-cves" style="display:none">
+    ${c.map(x=>`<div class="finding">
+      <div class="find-top">
+        <div><div class="find-id">${x.cve_id}</div><div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:2px">Port ${x.port} · ${x.service}</div></div>
+        <div style="text-align:right"><span class="sev sev-${x.severity}">${x.severity}</span><div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:3px">CVSS ${x.cvss_score}</div></div>
+      </div>
+      <div class="find-desc">${x.description}</div>
+      ${noteRow(d.scan_id,x.cve_id)}
+    </div>`).join('')||'<div class="nd">No CVEs matched</div>'}
+  </div>`;
+}
+function tRecon(d){
+  const s=d.all_subdomains||[],em=d.harvester?.emails||[],tech=d.whatweb?.technologies||[];
+  return `<div id="rt-recon" style="display:none"><div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">Subdomains</span><span class="card-cnt">${s.length}</span></div>
+      <div class="card-body"><div class="sub-list">${s.map(x=>`<div class="sub-item">${x}</div>`).join('')||'<div class="nd">None found</div>'}</div></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-hdr"><span class="card-ttl">Emails</span><span class="card-cnt">${em.length}</span></div>
+        <div class="card-body">${em.map(e=>`<div style="font-family:var(--font-mono);font-size:11px;padding:3px 0;color:var(--yellow)">${e}</div>`).join('')||'<div class="nd">None found</div>'}</div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-ttl">Technologies</span><span class="card-cnt">${tech.length}</span></div>
+        <div class="card-body">${tech.map(t=>`<span class="tag tag-sky">${t.name}${t.version?' '+t.version:''}</span>`).join('')||'<div class="nd">None detected</div>'}</div>
+      </div>
+    </div>
+  </div></div>`;
+}
+function tDns(d){
+  const w=d.whois||{},dns=d.dns?.records||{};
+  return `<div id="rt-dns" style="display:none"><div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">WHOIS</span></div>
+      <div class="card-body"><table class="kv">${Object.entries(w).filter(([k,v])=>v&&v!=='None'&&k!=='status').map(([k,v])=>`<tr><td class="kk">${k}</td><td class="kv-v">${Array.isArray(v)?v.slice(0,3).join(', '):String(v).slice(0,80)}</td></tr>`).join('')||'<tr><td class="kk" colspan="2" style="color:var(--dim)">No data</td></tr>'}</table></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">DNS Records</span></div>
+      <div class="card-body">${Object.entries(dns).filter(([k,v])=>v?.length).map(([t,vals])=>`<div style="margin-bottom:10px"><div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:3px">${t}</div>${vals.slice(0,5).map(v=>`<div style="font-family:var(--font-mono);font-size:10px;color:var(--body);padding:2px 0">${v}</div>`).join('')}</div>`).join('')||'<div class="nd">No DNS data</div>'}</div>
+    </div>
+  </div></div>`;
+}
+function tIp(d){
+  const geo=d.ip_geo||{},bl=d.ip_blacklist||{},sh=d.shodan||{};
+  return `<div id="rt-ip" style="display:none"><div class="g2">
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">Geolocation</span></div>
+      <div class="card-body">${geo.status==='ok'?`<table class="kv">${[['IP',geo.ip],['Hostname',geo.hostname],['City',geo.city],['Region',geo.region],['Country',geo.country],['Org',geo.org],['Timezone',geo.timezone],['Coords',geo.loc]].filter(([k,v])=>v).map(([k,v])=>`<tr><td class="kk">${k}</td><td class="kv-v">${v}</td></tr>`).join('')}</table>`:`<div class="nd">${geo.error||'Not run'}</div>`}</div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-hdr"><span class="card-ttl">Blacklist Check</span></div>
+        <div class="card-body">${bl.status==='ok'?`<div style="font-family:var(--font-mono);font-size:13px;color:${bl.clean?'var(--green)':'var(--red)'};margin-bottom:8px">${bl.clean?'✓ Clean':'✗ Blacklisted'}</div>${(bl.blacklisted_on||[]).map(l=>`<span class="tag tag-red">${l}</span>`).join('')}${(bl.checked_lists||[]).map(l=>`<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);padding:2px 0">${(bl.blacklisted_on||[]).includes(l)?'✗':'✓'} ${l}</div>`).join('')}`:`<div class="nd">${bl.error||'Not run'}</div>`}</div>
+      </div>
+      ${sh.status==='ok'?`<div class="card"><div class="card-hdr"><span class="card-ttl">Shodan</span></div><div class="card-body"><div style="font-size:12px;color:var(--body);margin-bottom:6px">${sh.org||''} · ${sh.country||''}</div>${(sh.vulns||[]).map(v=>`<span class="tag tag-red">${v}</span>`).join('')}${(sh.ports||[]).slice(0,10).map(p=>`<span class="tag tag-sky">${p}</span>`).join('')}</div></div>`:''}
+    </div>
+  </div></div>`;
+}
+function tBreach(d){
+  const h=d.hibp||{};
+  return `<div id="rt-breach" style="display:none">
+    ${h.status==='ok'?`<div class="card" style="margin-bottom:12px"><div class="card-body"><div style="font-family:var(--font-mono);font-size:14px;color:${h.pwned?'var(--red)':'var(--green)'};margin-bottom:4px">${h.pwned?`✗ Pwned — ${h.breach_count} breach(es) found`:'✓ Not found in known breaches'}</div></div></div>
+    ${(h.breaches||[]).map(b=>`<div class="breach"><div class="breach-name">${b.name}</div><div class="breach-date">${b.date||''}</div><div class="breach-tags">${(b.data_classes||[]).map(c=>`<span class="btag">${c}</span>`).join('')}</div></div>`).join('')}`:`<div class="nd">${h.error||'Not run'}</div>`}
+  </div>`;
+}
+function tPwd(d){
+  const p=d.pwned_pass||{};
+  return `<div id="rt-pwd" style="display:none"><div class="card"><div class="card-hdr"><span class="card-ttl">Password Security</span></div><div class="card-body">
+    ${p.status==='ok'?`<div style="font-family:var(--font-mono);font-size:14px;color:${p.pwned?'var(--red)':'var(--green)'};margin-bottom:12px">${p.pwned?`✗ Compromised · seen ${p.count?.toLocaleString()} times in breach databases`:'✓ Not found in known breach databases'}</div><div class="notice">Password checked via k-anonymity SHA-1 prefix. Your password was never transmitted.</div>`:`<div class="nd">${p.error||'Not run'}</div>`}
+  </div></div></div>`;
+}
+function tHash(d){
+  const hi=d.hash_id||{},hl=d.hash_lookup||{};
+  return `<div id="rt-hash" style="display:none"><div class="g2">
+    <div class="card"><div class="card-hdr"><span class="card-ttl">Hash Identification</span></div><div class="card-body">${hi.status==='ok'?`<table class="kv"><tr><td class="kk">Hash</td><td class="kv-v" style="word-break:break-all;font-size:10px;font-family:var(--font-mono)">${hi.hash}</td></tr><tr><td class="kk">Length</td><td class="kv-v">${hi.length} chars</td></tr><tr><td class="kk">Type(s)</td><td class="kv-v">${(hi.possible_types||[]).map(t=>`<span class="tag tag-sky">${t}</span>`).join(' ')}</td></tr></table>`:'<div class="nd">Not run</div>'}</div></div>
+    <div class="card"><div class="card-hdr"><span class="card-ttl">Hash Lookup</span></div><div class="card-body">${hl.status==='ok'?hl.results?.length?hl.results.map(r=>`<div style="font-family:var(--font-mono);font-size:13px;color:var(--green)">${r.plaintext} <span style="color:var(--dim);font-size:10px">via ${r.source}</span></div>`).join(''):`<div class="nd">No plaintext found</div><div class="notice" style="margin-top:8px">${hl.note}</div>`:'<div class="nd">Not run</div>'}</div></div>
+  </div></div>`;
+}
+function tUname(d){
+  const u=d.username||{},found=(u.platforms||[]).filter(p=>p.exists===true);
+  return `<div id="rt-uname" style="display:none"><div class="card">
+    <div class="card-hdr"><span class="card-ttl">Username: ${u.username||''}</span><span class="card-cnt" style="color:var(--green)">${found.length} found</span></div>
+    <div class="card-body">${(u.platforms||[]).map(p=>`<div class="plat-row"><span class="plat-name">${p.platform}</span>${p.exists===true?`<a href="${p.url}" target="_blank" class="plat-found">✓ Exists →</a>`:p.exists===false?`<span class="plat-miss">✗ not found</span>`:`<span style="font-family:var(--font-mono);font-size:10px;color:var(--dim)">timeout</span>`}</div>`).join('')||'<div class="nd">Not run</div>'}</div>
+  </div></div>`;
+}
+function tEmail(d){
+  const e=d.email_valid||{};
+  return `<div id="rt-email" style="display:none"><div class="card"><div class="card-hdr"><span class="card-ttl">Email Validation</span></div><div class="card-body">${e.status==='ok'?`<table class="kv"><tr><td class="kk">Address</td><td class="kv-v" style="font-family:var(--font-mono)">${e.email}</td></tr><tr><td class="kk">Syntax</td><td class="kv-v" style="color:${e.syntax_valid?'var(--green)':'var(--red)'}">${e.syntax_valid?'✓ Valid':'✗ Invalid'}</td></tr><tr><td class="kk">MX Record</td><td class="kv-v" style="color:${e.mx_valid?'var(--green)':'var(--red)'}">${e.mx_valid?'✓ Valid':'✗ No MX found'}</td></tr><tr><td class="kk">Disposable</td><td class="kv-v" style="color:${e.disposable?'var(--red)':'var(--green)'}">${e.disposable?'✗ Disposable domain':'✓ No'}</td></tr>${e.mx_records?.length?`<tr><td class="kk">MX Records</td><td class="kv-v" style="font-family:var(--font-mono);font-size:10px">${e.mx_records.join('<br>')}</td></tr>`:''}</table>`:'<div class="nd">Not run</div>'}</div></div></div>`;
+}
+function tSsl(d){
+  const s=d.ssl_check||{};
+  return `<div id="rt-ssl" style="display:none"><div class="card"><div class="card-hdr"><span class="card-ttl">SSL / TLS Certificate</span></div><div class="card-body">
+    ${s.status==='ok'||s.status==='warning'?`${s.expired?`<div style="font-family:var(--font-mono);font-size:12px;color:var(--red);margin-bottom:10px;padding:8px 10px;background:var(--red-d);border-radius:7px;border:1px solid rgba(247,87,106,.2)">✗ Certificate is expired</div>`:''} ${s.expiring_soon?`<div style="font-family:var(--font-mono);font-size:12px;color:var(--yellow);margin-bottom:10px;padding:8px 10px;background:var(--yellow-d);border-radius:7px;border:1px solid rgba(251,191,36,.2)">⚠ Expires in ${s.days_until_expiry} days</div>`:''}<table class="kv">${[['Subject',(s.subject||{}).commonName],['Issuer',((s.issuer||{}).organizationName)||((s.issuer||{}).commonName)],['Valid From',s.not_before],['Valid Until',s.not_after],['Days Left',s.days_until_expiry!==null?`${s.days_until_expiry} days`:'?'],['TLS Version',s.tls_version],['Cipher',s.cipher?s.cipher[0]:'?']].filter(([k,v])=>v).map(([k,v])=>`<tr><td class="kk">${k}</td><td class="kv-v" style="font-family:var(--font-mono);font-size:11px">${v}</td></tr>`).join('')}</table>${s.san?.length?`<div style="margin-top:10px"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px">Subject Alt Names</div>${s.san.slice(0,10).map(n=>`<span class="tag tag-sky">${n}</span>`).join('')}</div>`:''}`:`<div class="nd">${s.error||'Not run'}</div>`}
+  </div></div></div>`;
+}
+function tRaw(d){
+  return `<div id="rt-raw" style="display:none"><div class="card"><div class="card-hdr"><span class="card-ttl">Raw JSON</span></div><div class="card-body" style="padding:10px"><pre style="font-family:var(--font-mono);font-size:9px;color:var(--muted);overflow:auto;max-height:400px;white-space:pre-wrap">${JSON.stringify(d,null,2)}</pre></div></div></div>`;
+}
+function noteRow(sid,key){
+  const ex=notes[key]||{};
+  const opts=['open','false_positive','accepted_risk','remediated'];
+  return `<div class="note-row">
+    <select class="note-sel" id="ns_${key}">${opts.map(o=>`<option value="${o}" ${ex.status===o?'selected':''}>${o.replace('_',' ')}</option>`).join('')}</select>
+    <input class="note-inp" id="ni_${key}" placeholder="Add a note…" value="${ex.note||''}"/>
+    <button class="note-save" onclick="saveNote('${sid}','${key}')">Save</button>
+  </div>`;
+}
+async function saveNote(sid,key){
+  const s=document.getElementById(`ns_${key}`)?.value;
+  const n=document.getElementById(`ni_${key}`)?.value||'';
+  await fetch(`${API}/api/findings/note`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({scan_id:sid,finding_key:key,status:s,note:n})});
+  toast('Note saved');
+}
+
+// ── DIFF ──────────────────────────────────────────
+async function loadDiff(id){
+  const r=await fetch(`${API}/api/scan/${id}/diff`,{credentials:'include'});
+  const diff=await r.json();
+  if(!diff.has_changes)return;
+  const area=document.getElementById('diffArea');if(!area)return;
+  const items=[];
+  if(diff.new_subdomains?.length)items.push(`<div class="diff-item d-add">+ ${diff.new_subdomains.length} new subdomain(s)</div>`);
+  if(diff.removed_subdomains?.length)items.push(`<div class="diff-item d-rem">− ${diff.removed_subdomains.length} removed subdomain(s)</div>`);
+  if(diff.new_ports?.length)items.push(`<div class="diff-item d-add">+ New ports: ${diff.new_ports.join(', ')}</div>`);
+  if(diff.closed_ports?.length)items.push(`<div class="diff-item d-rem">− Closed ports: ${diff.closed_ports.join(', ')}</div>`);
+  if(diff.new_vulns?.length)items.push(`<div class="diff-item d-add">+ ${diff.new_vulns.length} new finding(s)</div>`);
+  if(diff.risk_change)items.push(`<div class="diff-item d-chg">⚠ Risk level changed: ${diff.risk_change.from} → ${diff.risk_change.to}</div>`);
+  area.innerHTML=`<div class="diff-banner"><div class="diff-label">Changes from previous scan</div>${items.join('')}</div>`;
+}
+
+// ── HISTORY ──────────────────────────────────────
+async function loadHistory(){
+  const r=await fetch(`${API}/api/scans`,{credentials:'include'});
+  const s=await r.json();
+  const bar=document.getElementById('histStrip');
+  if(!s.length){bar.innerHTML='<span class="hist-empty">No scans yet</span>';return;}
+  const lm={CRITICAL:'C',HIGH:'H',MEDIUM:'M',LOW:'L'};
+  bar.innerHTML=s.map(x=>{
+    let badge='';
+    if(x.status==='done'&&x.risk_level)badge=`<span class="hi-badge hb-${lm[x.risk_level]||'L'}">${x.risk_level}</span>`;
+    else if(x.status==='running')badge=`<span class="hi-badge hb-R">${x.progress}%</span>`;
+    else if(x.status==='failed')badge=`<span class="hi-badge" style="color:var(--red)">ERR</span>`;
+    return `<div class="hist-chip ${x.scan_id===curScan?'active':''}" onclick="selScan('${x.scan_id}','${x.target}','${x.status}')">
+      <span class="hi-type">[${x.input_type||'?'}]</span>
+      <span class="hi-tgt">${x.target}</span>${badge}
+    </div>`;
+  }).join('');
+}
+async function selScan(id,tgt,status){
+  curScan=id;loadHistory();
+  if(status==='done'){await loadResults(id);}
+  else if(status==='running'||status==='pending'){showProg(tgt,id,[]);poll(id);}
+}
+
+// ── GRAPH ──────────────────────────────────────────
+async function showGraph(id){
+  const r=await fetch(`${API}/api/scan/${id}/graph`,{credentials:'include'});
+  const data=await r.json();
+  document.getElementById('graphModal').style.display='flex';
+  setTimeout(()=>renderGraph(data),50);
+}
+function renderGraph(data){
+  const svg=d3.select('#graphSvg');svg.selectAll('*').remove();
+  const W=document.getElementById('graphSvg').clientWidth;
+  const H=document.getElementById('graphSvg').clientHeight;
+  const C={target:'#7c6af7',subdomain:'#34d399',dns_record:'#a78bfa',port:'#38bdf8',vuln:'#f7576a',cve:'#f7576a',email:'#fbbf24',default:'#6b6b80'};
+  const sim=d3.forceSimulation(data.nodes)
+    .force('link',d3.forceLink(data.links).id(d=>d.id).distance(85))
+    .force('charge',d3.forceManyBody().strength(-210))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collision',d3.forceCollide(22));
+  const g=svg.append('g');
+  svg.call(d3.zoom().scaleExtent([.15,4]).on('zoom',e=>g.attr('transform',e.transform)));
+  g.append('g').selectAll('line').data(data.links).enter().append('line')
+    .attr('stroke','#2a2a38').attr('stroke-width',1.5).attr('stroke-opacity',.8);
+  const node=g.append('g').selectAll('g').data(data.nodes).enter().append('g').attr('cursor','pointer')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y})
+      .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y})
+      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+  node.append('circle')
+    .attr('r',d=>d.type==='target'?13:d.type==='vuln'||d.type==='cve'?9:7)
+    .attr('fill',d=>C[d.type]||C.default)
+    .attr('fill-opacity',.9)
+    .attr('stroke','#0f0f13').attr('stroke-width',1.5);
+  node.append('text').text(d=>d.label.length>22?d.label.slice(0,20)+'…':d.label)
+    .attr('fill','#b0b0c3').attr('font-size','9px').attr('font-family','Fira Code,monospace')
+    .attr('dy',18).attr('text-anchor','middle');
+  node.append('title').text(d=>d.label);
+  sim.on('tick',()=>{
+    g.selectAll('line').attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+}
+
+// ── TARGETS ──────────────────────────────────────
+async function loadTargets(){
+  const r=await fetch(`${API}/api/targets`,{credentials:'include'});
+  allTargets=await r.json();
+  const g=document.getElementById('targetGrid');
+  if(!allTargets.length){g.innerHTML='<div class="nd">No targets saved yet</div>';return;}
+  g.innerHTML=allTargets.map(t=>`
+    <div class="tg-card" onclick="scanTarget('${t.value}')">
+      <div class="tg-val">${t.value}</div>
+      <div class="tg-lbl">${t.label||'Unnamed target'}</div>
+      <div class="tg-foot">
+        <span class="tg-type">${t.input_type}</span>
+        <span class="tg-time">${t.last_scanned?new Date(t.last_scanned).toLocaleDateString():'Never'}</span>
+      </div>
+      ${(t.tags||[]).map(tag=>`<span class="tag tag-sky" style="margin-top:6px">${tag}</span>`).join('')}
+    </div>`).join('');
+}
+async function addTarget(){
+  const v=document.getElementById('newVal').value.trim();
+  const l=document.getElementById('newLabel').value.trim();
+  if(!v)return toast('Enter a target value');
+  await fetch(`${API}/api/targets`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({value:v,label:l})});
+  document.getElementById('newVal').value='';document.getElementById('newLabel').value='';
+  await loadTargets();toast('Target added');
+}
+function scanTarget(v){
+  document.querySelector('.nav-item').click();
+  document.getElementById('targetInput').value=v;
+  onInput(v);setTimeout(selRec,400);
+}
+
+// ── SCHEDULES ──────────────────────────────────────
+async function loadSchedules(){
+  const r=await fetch(`${API}/api/schedules`,{credentials:'include'});
+  const s=await r.json();
+  const list=document.getElementById('schedList');
+  if(!s.length){list.innerHTML='<div class="nd">No schedules configured</div>';return;}
+  list.innerHTML=s.map(x=>`
+    <div class="sch-card">
+      <div class="sch-info">
+        <div class="sch-tgt">${x.target_value}</div>
+        <div class="sch-meta">Every ${x.interval_hours}h · ${x.modules.length} modules · Next: ${x.next_run?new Date(x.next_run).toLocaleString():'—'}</div>
+      </div>
+      <button class="tog-btn ${x.enabled?'tog-on':'tog-off'}" onclick="togSched(${x.id},${!x.enabled})">${x.enabled?'Active':'Paused'}</button>
+      <button class="del-btn" onclick="delSched(${x.id})">Delete</button>
+    </div>`).join('');
+}
+function openSchedModal(){
+  document.getElementById('schedTarget').innerHTML=allTargets.map(t=>`<option value="${t.id}">${t.value}</option>`).join('');
+  document.getElementById('schedModal').style.display='flex';
+}
+async function createSchedule(){
+  const tid=parseInt(document.getElementById('schedTarget').value);
+  const ih=parseInt(document.getElementById('schedInterval').value);
+  const ms=document.getElementById('schedModules').value.split(',').map(s=>s.trim()).filter(Boolean);
+  await fetch(`${API}/api/schedules`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({target_id:tid,interval_hours:ih,modules:ms})});
+  document.getElementById('schedModal').style.display='none';
+  await loadSchedules();toast('Schedule created');
+}
+async function togSched(id,e){
+  await fetch(`${API}/api/schedules/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({enabled:e})});
+  await loadSchedules();
+}
+async function delSched(id){
+  await fetch(`${API}/api/schedules/${id}`,{method:'DELETE',credentials:'include'});
+  await loadSchedules();toast('Schedule deleted');
+}
+
+// ── AUDIT ──────────────────────────────────────────
+async function loadAudit(){
+  const r=await fetch(`${API}/api/audit`,{credentials:'include'});
+  if(!r.ok){document.querySelector('#auditTbl tbody').innerHTML='<tr><td colspan="5" style="text-align:center;padding:16px;font-family:var(--font-mono);font-size:11px;color:var(--dim)">Admin access required</td></tr>';return;}
+  const logs=await r.json();
+  document.querySelector('#auditTbl tbody').innerHTML=logs.map(l=>`
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:10px;color:var(--dim)">${new Date(l.timestamp).toLocaleString()}</td>
+      <td style="font-weight:600">${l.username}</td>
+      <td style="font-family:var(--font-mono);font-size:10px;color:var(--accent-light)">${l.action}</td>
+      <td style="font-size:11px;color:var(--muted)">${l.detail}</td>
+      <td style="font-family:var(--font-mono);font-size:10px;color:var(--dim)">${l.ip}</td>
+    </tr>`).join('');
+}
+
+// ── TOAST ──────────────────────────────────────────
+function toast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+</script>
+</body>
+</html>
